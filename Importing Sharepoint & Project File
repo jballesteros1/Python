@@ -1,0 +1,47 @@
+CREATE TABLE sharepoint_june(
+site varchar (8),
+svo varchar (80),
+date_shipped varchar (20),
+amount_shipped smallint,
+due_date date,
+amount_returned smallint,
+non_5500_returned_damaged smallint,
+svo_balance smallint,
+svo_summary varchar(225),
+notes varchar (250),
+notice_15_day varchar (3),
+notice_25_day varchar(3),
+invoiced varchar(3),
+invoice_date date,
+invoice_quantity smallint,
+svo_status varchar (8),
+add_comments varchar (100)
+);
+
+DROP TABLE sharepoint_june;
+
+COPY sharepoint_june
+FROM 'D:\sharepoint_june.csv'
+WITH (FORMAT CSV, HEADER, encoding 'windows-1251');
+
+UPDATE sharepoint_june 
+SET date_shipped = exchanges_cleaned.ship_date 
+FROM exchanges_cleaned
+WHERE svo NOT IN ('SVO128216','SVO148436','SVO124332','SVO169754','SVO146849',
+'SVO121001', 'SVO178336','SVO123693','SVO153868', 'SVO162576')
+AND sharepoint_june.svo = exchanges_cleaned.ship_svo;
+
+CREATE TABLE exchanges_joined_june AS (SELECT * FROM sharepoint_june FULL OUTER JOIN exchanges_cleaned
+ON sharepoint_june.svo = exchanges_cleaned.ship_svo AND 
+sharepoint_june.date_shipped = exchanges_cleaned.ship_date);
+
+DROP TABLE exchanges_joined_june;
+
+SELECT * FROM exchanges_joined_june;
+
+
+CREATE TABLE stb_project_2(
+service varchar(10), completed varchar(5));
+COPY stb_project_2
+FROM 'D:\STB Exchange project2.csv'
+WITH (FORMAT CSV, HEADER, encoding 'windows-1251');

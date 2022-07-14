@@ -1,0 +1,33 @@
+CREATE TABLE exchanges_cleaned(
+ship_date varchar(70),
+site_id varchar (10),
+ship_svo varchar(40),
+eqpmt_shipped varchar(40),
+ship_condition varchar(40),
+tracking varchar(70),
+prp_tracking varchar(70),
+rcvd_date varchar (70),
+rcvd_site varchar(100),
+rcvd_svo varchar(140),
+rcvd_eqpmt varchar(80),
+condition_rcvd varchar (20),
+trk_used varchar(120)
+);
+
+DROP TABLE exchanges_cleaned;
+
+COPY exchanges_cleaned
+FROM 'D:\Shipped_Received_clean.csv'
+WITH (FORMAT CSV, HEADER, encoding 'windows-1251');
+
+
+SELECT ship_date,site_id,ship_svo,eqpmt_shipped,rcvd_date,rcvd_site,rcvd_svo,rcvd_eqpmt,trk_used,count(ship_svo) FROM exchanges_cleaned
+GROUP BY ship_date,site_id,ship_svo,eqpmt_shipped,rcvd_date,rcvd_site,rcvd_svo,rcvd_eqpmt,trk_used
+having count(ship_svo)>1 ORDER BY ship_date ASC;
+
+
+SELECT ship_date,site_id,ship_svo,eqpmt_shipped,rcvd_date,rcvd_site,rcvd_svo,rcvd_eqpmt,trk_used FROM exchanges_cleaned
+WHERE rcvd_site ILIKE 'S8647'
+GROUP BY ship_date,site_id,ship_svo,eqpmt_shipped,rcvd_date,rcvd_site,rcvd_svo,rcvd_eqpmt,trk_used
+ORDER BY ship_date ASC;
+

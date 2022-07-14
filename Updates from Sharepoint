@@ -1,0 +1,55 @@
+CREATE TABLE db_july2(
+site varchar (8),
+svo varchar (80),
+date_shipped varchar (20),
+amount_shipped smallint,
+due_date date,
+amount_returned smallint,
+non_5500_returned_damaged smallint,
+svo_balance smallint,
+svo_summary varchar(450),
+notes varchar (450),
+notice_15_day varchar (3),
+notice_25_day varchar(3),
+invoiced varchar(3),
+invoice_date date,
+invoice_quantity smallint,
+svo_status varchar (8),
+add_comments varchar (100)
+);
+
+DROP TABLE db_july28;
+
+COPY db_july2
+FROM 'D:\DB 702.csv'
+WITH (FORMAT CSV, HEADER, encoding 'windows-1251');
+
+
+
+DROP VIEW svo_open;
+
+CREATE OR REPLACE VIEW svo_open AS(
+SELECT * FROM sharepoint_test where svo_status ILIKE 'Open');
+
+UPDATE svo_open SET amount_shipped=july.amount_shipped,due_date=july.due_date, non_5500_returned_damaged=july.non_5500_returned_damaged,
+svo_balance=july.svo_balance,svo_summary=july.svo_summary,notes=july.notes,notice_15_day=july.notice_15_day,
+notice_25_day=july.notice_25_day,invoiced=july.invoiced,invoice_date=july.invoice_date,invoice_quantity=july.invoice_quantity,
+svo_status=july.svo_status,add_comments=july.add_comments
+FROM db_july2 july
+WHERE svo_open.svo=july.svo;
+
+
+
+--add remove to the ones that will be deleted, cols rcvd_site & rcvd_eqpmt. THIS IS FOR THE FUNCTION.
+
+DELETE FROM sharepoint_test WHERE xid='2348';
+DELETE FROM sharepoint_test where rcvd_site ILIKE '%remove';
+SELECT xid from sharepoint_test order by xid desc;
+
+SELECT * FROM sharepoint_test where svo in('SVO171441','SVO185842','SVO186604','SVO187095','SVO188263'
+'SVO188039','SVO188764') ORDER BY svo ASC;
+
+SELECT * FROM test3 where trk_used='9622013690001193592300518619252562';
+
+SELECT * FROM test2 where date_shipped > '2022-06-12';
+SELECT * FROM test3 where invoice_date>'2022-06-12';

@@ -1,0 +1,133 @@
+CREATE TABLE sharepoint_test_copy AS (SELECT * FROM sharepoint_test ORDER BY ship_date ASC);
+CREATE TABLE sharepoint_test AS (SELECT * FROM sharepoint_test3 ORDER BY ship_date ASC);
+CREATE TABLE sharepoint_test3 AS (SELECT * FROM sharepoint_test ORDER BY ship_date ASC);
+CREATE TABLE shipping_sharepoint_test AS (SELECT * FROM )
+
+
+
+CREATE OR REPLACE FUNCTION update_exchanges()
+RETURNS void AS $$
+	BEGIN
+
+	CREATE TABLE shipping_test(
+	shipped varchar (10),
+	shipdate_o date, shipsite_o varchar(30),
+	svo_o varchar (40),
+	eqpmtship_o varchar (40),
+	sn_o varchar (30),
+	conditionship_o varchar(50),
+	trk_o varchar (50),
+	prptrk_o varchar (50), blank varchar (30),received varchar(10),
+	rcvddate_o date,rcvdsite_o varchar (80),rcvdsvo_o varchar (120),rcvdeqpmt varchar (85),
+	snrcvd_o varchar (35),conditionrcvd varchar(35),trkrcvd varchar(40),
+	null1 varchar (45),null2 varchar (30),null3 varchar (30),null4 varchar (10),null5 varchar (10),
+	null6 varchar (10),null7 varchar (10),null8 varchar (10));
+	COPY shipping_test
+	FROM 'D:\SHIPPED & RECEIVED 708.csv'
+	WITH (FORMAT CSV, HEADER, encoding 'windows-1251');
+
+	CREATE OR REPLACE VIEW new_exchanges AS
+		SELECT shipdate_o, shipsite_o,svo_o,eqpmtship_o,conditionship_o,trk_o,prptrk_o,
+		rcvddate_o,rcvdsite_o,rcvdsvo_o,rcvdeqpmt,conditionrcvd,trkrcvd
+		FROM shipping_test 
+		WHERE shipdate_o > '2022-06-30' OR rcvddate_o > '2022-06-30' 
+		ORDER BY shipdate_o ASC;
+
+
+	CREATE TABLE sharepoint_test(
+	site varchar (11),
+	svo varchar (80),
+	date_shipped varchar (60),
+	amount_shipped smallint,
+	due_date date,
+	amount_returned smallint,
+	non_5500_returned_damaged smallint,
+	svo_balance smallint,
+	svo_summary varchar(225),
+	notes varchar (250),
+	notice_15_day varchar (3),
+	notice_25_day varchar(3),
+	invoiced varchar(3),
+	invoice_date date,
+	invoice_quantity smallint,
+	svo_status varchar (8),
+	add_comments varchar (100),
+	ship_date varchar (70),	site_id varchar (11),	ship_svo varchar(70),	eqpmt_shipped varchar(40),
+	ship_condition varchar(40),	tracking varchar(70), prp_tracking varchar(70),rcvd_date varchar(70), 
+	rcvd_site varchar(100),	rcvd_svo varchar(140), rcvd_eqpmt varchar(80), condition_rcvd varchar(20),
+	trk_used varchar(120), complete varchar(5), xid bigint,
+	CONSTRAINT pk PRIMARY KEY (ship_date,site_id,eqpmt_shipped,rcvd_date,rcvd_site,rcvd_eqpmt)
+	);
+
+	COPY sharepoint_test
+	FROM 'D:\Exchanges sharepoint_test 701.csv'
+	WITH (FORMAT CSV, HEADER, encoding 'windows-1251');	
+
+
+
+
+	UPDATE new_exchanges SET rcvdeqpmt='PLACEHOLDER' WHERE rcvdeqpmt isnull;
+	UPDATE new_exchanges SET eqpmtship_o='PLACEHOLDER' WHERE eqpmtship_o isnull;
+	UPDATE new_exchanges SET rcvdsite_o='PLACEHOLDER' WHERE rcvdsite_o isnull;
+	UPDATE new_exchanges SET shipsite_o='PLACEHOLDER' WHERE shipsite_o isnull;
+	UPDATE new_exchanges SET rcvddate_o='2025-01-01' WHERE rcvddate_o isnull;
+	UPDATE new_exchanges SET shipdate_o='2025-01-01' WHERE shipdate_o isnull;
+
+
+	UPDATE sharepoint_test SET site_id=sharepoint_test.site WHERE site_id isnull or site_id='nan' or site_id='PLACEHOLDER' and site notnull;
+	UPDATE sharepoint_test SET ship_svo=sharepoint_test.svo WHERE ship_svo isnull or ship_svo='nan' or ship_svo='PLACEHOLDER' and svo notnull;
+	UPDATE sharepoint_test SET ship_date=sharepoint_test.date_shipped WHERE ship_date isnull or ship_date='nan' or ship_date='PLACEHIOLDER' and date_shipped notnull;
+
+
+	INSERT INTO sharepoint_test (ship_date,site_id,ship_svo,eqpmt_shipped,
+	ship_condition,tracking,prp_tracking,rcvd_date,rcvd_site,rcvd_svo,rcvd_eqpmt,condition_rcvd,
+	trk_used)
+	SELECT * FROM new_exchanges	
+		ON CONFLICT ON CONSTRAINT pk DO 
+	UPDATE SET ship_date=EXCLUDED.ship_date,site_id=EXCLUDED.site_id,ship_svo=EXCLUDED.ship_svo,
+	eqpmt_shipped=EXCLUDED.eqpmt_shipped,ship_condition=EXCLUDED.ship_condition,
+	tracking=EXCLUDED.tracking,prp_tracking=EXCLUDED.prp_tracking,rcvd_date=EXCLUDED.rcvd_date,
+	rcvd_site=EXCLUDED.rcvd_site,rcvd_svo=EXCLUDED.rcvd_svo,rcvd_eqpmt=EXCLUDED.rcvd_eqpmt,
+	condition_rcvd=EXCLUDED.condition_rcvd,trk_used=EXCLUDED.trk_used;
+
+
+	UPDATE sharepoint_test SET site=sharepoint_test.site_id WHERE site isnull OR site = 'PLACEHOLDER' AND site_id notnull;
+	UPDATE sharepoint_test SET site=sharepoint_test.rcvd_site WHERE site isnull OR site = 'PLACEHOLDER' AND rcvd_site notnull;
+	UPDATE sharepoint_test SET svo=sharepoint_test.ship_svo WHERE svo isnull OR svo = 'PLACEHOLDER' AND ship_svo notnull;
+	UPDATE sharepoint_test SET ship_svo=sharepoint_test.svo WHERE ship_svo isnull OR ship_svo = 'PLACEHOLDER' AND svo notnull;
+	UPDATE sharepoint_test SET date_shipped=sharepoint_test.ship_date WHERE date_shipped isnull OR date_shipped='2025-01-01' AND ship_date notnull;
+
+
+	COPY (SELECT * FROM sharepoint_test ORDER BY date_shipped ASC) TO 'D:\Exchanges CSV.csv'
+	WITH (FORMAT CSV, HEADER);
+
+		--END;
+	RAISE NOTICE 'Database has been updated and generated. Please review duplicated SVOs.';
+END;
+$$ LANGUAGE plpgsql;
+
+DROP FUNCTION update_exchanges();
+SELECT update_exchanges();
+SELECT * FROM sharepoint_test ORDER BY rcvd_date ASC;
+
+-- QUERIES TO CHECK
+SELECT * FROM sharepoint_test WHERE site isnull or site='nan' order by ship_date ASC;
+SELECT ship_date,site_id,ship_svo,count(ship_svo) FROM sharepoint_test
+GROUP BY ship_date,site_id,ship_svo
+having count(ship_svo)>1 ORDER BY ship_date ASC;
+SELECT * FROM sharepoint_test3 WHERE site_id='PLACEHOLDER' AND rcvd_site='PLACEHOLDER' AND rcvd_eqpmt='PLACEHOLDER'
+ORDER by svo;
+-----
+ALTER TABLE sharepoint_test ADD COLUMN xid bigserial;
+DELETE FROM sharepoint_test WHERE xid='2300';
+
+DROP VIEW new_exchanges;
+DROP TABLE shipping_test;
+DROP TABLE sharepoint_test;
+
+COPY (SELECT * FROM sharepoint_test ORDER BY date_shipped ASC) TO 'D:\Exchanges sharepoint_test 708.csv'
+WITH (FORMAT CSV, HEADER);
+
+DELETE FROM sharepoint_test WHERE prp_tracking ILIKE '%sold%' AND rcvd_eqpmt = 'PLACEHOLDER';
+
+select * from sharepoint_test order by date_shipped asc;
